@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Proyecto 2 – Panel</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+
+<style>
+  /* ---------- BASE ---------- */
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    display:flex;align-items:center;justify-content:center;min-height:100vh;padding:2rem;
+    font-family:Poppins,sans-serif;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#f1f5f9
+  }
+  .app{width:100%;max-width:1100px}
+  .card{
+    backdrop-filter:blur(12px) saturate(180%);background:rgba(255,255,255,.45);
+    border:1px solid rgba(255,255,255,.25);border-radius:1rem;
+    box-shadow:0 8px 24px rgba(0,0,0,.15);padding:2.5rem;overflow:visible
+  }
+  h1{text-align:center;margin-bottom:1.5rem;color:#fff;font:600 1.6rem Poppins}
+  .group{display:flex;flex-direction:column;gap:.25rem;margin:1rem 0}
+  .group label{font:.85rem Poppins;color:#e0e7ff}
+
+  /* ---------- CONTROLES ---------- */
+  input,select,textarea,button{font-family:Poppins;transition:.2s}
+  input,select,textarea{
+    background:rgba(255,255,255,.25);border:1px solid transparent;
+    padding:.7rem .9rem;border-radius:.65rem;font:.92rem;color:#fff;width:100%
+  }
+  input:focus,select:focus,textarea:focus{
+    outline:none;border-color:#c7d2fe;background:rgba(255,255,255,.35)
+  }
+  button{
+    background:#6366f1;border:none;padding:.85rem 1rem;border-radius:.75rem;
+    color:#fff;cursor:pointer;font:500 1rem
+  }
+  button:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.2)}
+  button:active{transform:scale(.97)}
+  .hidden{display:none!important}
+
+  /* ---------- LAYOUT ---------- */
+  #menu{display:none;gap:1rem;justify-content:center;margin-bottom:1.5rem}
+  #menu button{
+    background:rgba(255,255,255,.25);border:none;padding:.75rem 1.25rem;
+    border-radius:.65rem;color:#fff
+  }
+  #menu button.active,#menu button:hover{background:rgba(255,255,255,.4)}
+
+  .sections{display:none}
+  .section{display:none}
+  .section.active{display:block}
+
+  .tabs{display:flex;gap:1rem;justify-content:center;margin-bottom:1rem}
+  .tabs button{
+    background:rgba(255,255,255,.25);border:none;padding:.5rem 1rem;
+    border-radius:.5rem;color:#fff;cursor:pointer
+  }
+  .tabs button.active{background:rgba(255,255,255,.4)}
+  .tab-content{display:none}
+  .tab-content.active{display:block}
+
+  .config-form{display:flex;flex-wrap:wrap;gap:1rem;margin-bottom:1rem}
+  .config-form .group{flex:1 1 200px}
+
+  .config-table{
+    width:100%;border-collapse:collapse;margin-bottom:1rem;text-align:center
+  }
+  .config-table th,.config-table td{
+    border:1px solid rgba(255,255,255,.3);padding:.5rem
+  }
+
+  /* ---------- INCIDENCIAS (REGISTRO) ---------- */
+  #incContainer{display:flex;flex-direction:column;gap:.8rem;width:100%}
+  .incRow{display:flex;gap:1.25rem;width:100%}
+  .cat-col{flex:0 0 200px;max-width:200px}
+  .coment-col{flex:1 1 auto;min-width:0;display:flex;flex-direction:column}
+  .coment-wrapper{position:relative;display:flex;align-items:center;width:100%}
+  .coment{flex:1;width:100%;padding-right:2.1rem}
+  .delInc{
+    position:absolute;top:50%;right:.65rem;transform:translateY(-50%);
+    background:none;border:none;width:1.25rem;height:1.25rem;
+    display:flex;align-items:center;justify-content:center;
+    font-size:1.05rem;color:#f43f5e;cursor:pointer;border-radius:.35rem;transition:.15s
+  }
+  .delInc:hover{background:rgba(244,63,94,.18);transform:translateY(-50%) scale(1.15)}
+  .delInc:active{transform:translateY(-50%) scale(.9)}
+  #incContainer .incRow:not(:first-child) .cat-col > label,
+  #incContainer .incRow:not(:first-child) .coment-col > label{
+    visibility:hidden;height:0;margin:0;padding:0
+  }
+
+  /* ---------- REPORTE: alineación ---------- */
+  #repIncTable th:nth-child(-n+3),
+  #repIncTable td:nth-child(-n+3),
+  #repIncTable th:nth-child(-n+5),
+  #repIncTable td:nth-child(-n+5){
+    text-align:center;
+  }
+
+  /* ---------- SELECTS ---------- */
+
+  /* Campo select (mismo fondo que inputs) */
+  select{
+    background:rgba(255,255,255,.25);
+    color:#fff;
+    border:1px solid transparent;
+    -webkit-appearance:none;
+    -moz-appearance:none;
+    appearance:none;
+  }
+  select:focus{
+    background:rgba(255,255,255,.35);
+    border-color:#c7d2fe;
+  }
+
+  /* --- BASE DEL SELECT (campo visible) -------------------------------- */
+  select{
+    background:rgba(255,255,255,.25);
+    color:#fff;
+    border:1px solid transparent;
+    -webkit-appearance:none;-moz-appearance:none;appearance:none;
+  }
+  select:focus{
+    background:rgba(255,255,255,.35);
+    border-color:#c7d2fe;
+  }
+
+  /* --- OPCIONES DEL DESPLEGABLE -------------------------------------- */
+  /* 1 ▸ opciones normales (NO llevan data-usado)  */
+  select option:not([data-usado]){
+    background:#c7d2fe;          /* mismo lila claro */
+    color:#000;                  /* texto negro      */
+  }
+
+  /* 2 ▸ opciones bloqueadas (llevan data-usado="1") */
+  select option[data-usado]{
+    background:#a9a0e0;          /* lila un poco más oscuro */
+    color:#f43f5e;               /* texto rojo              */
+    cursor:not-allowed;
+    font-style:italic;
+  }
+
+  /* ---------- REPORTE ---------- */
+  #repFiltro{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:1rem;
+    margin-bottom:1rem
+  }
+  #repFiltro .group{margin:0}
+  #repIncTable th,#repIncTable td{
+    padding:.45rem .35rem;border:1px solid rgba(255,255,255,.25);font-size:.85rem
+  }
+  #repIncTable td{text-align:left}
+</style>
+
+</head>
+<body>
+  <div class="app">
+
+    <!-- LOGIN -->
+    <form id="loginForm" class="card" style="max-width:400px;margin:auto">
+      <h1>Acceso al sistema</h1>
+      <div class="group"><label>Usuario</label><input id="user" required></div>
+      <div class="group"><label>Clave</label><input id="pass" type="password" required></div>
+      <button>Entrar</button>
+      <p id="loginError" class="hidden">❌ Usuario o clave inválido</p>
+    </form>
+
+    <!-- MENÚ -->
+    <div id="menu">
+      <button data-sec="incidencias" class="active">Incidencias</button>
+      <button data-sec="cuadre">Cuadre de Caja</button>
+      <button data-sec="cfg">Configuración</button>
+      <button id="btnLogout">Salir</button>
+    </div>
+
+    <!-- SECCIONES -->
+    <div class="sections">
+
+      <!-- INCIDENCIAS -->
+      <section id="incidencias" class="section active">
+        <div class="card">
+          <h1>Incidencias</h1>
+
+          <div class="tabs" id="incidTabs">
+            <button data-itab="grupos"  class="active">GRUPOS</button>
+            <button data-itab="registro">Registro</button>
+            <button data-itab="reporte">Reporte</button>
+          </div>
+
+          <!-- TAB GRUPOS -->
+          <div id="itab-grupos" class="tab-content active">
+            <form id="incidenciaForm" class="config-form" onsubmit="return false">
+              <div class="group"><label>Fecha</label><input type="date" id="inc_fecha" required></div>
+              <div class="group"><label>Ruta</label>
+                <select id="inc_ruta" required><option value="">Seleccione…</option></select>
+              </div>
+              <div class="group"><label>Grupo</label>
+                <select id="inc_grupo" required><option value="">Seleccione…</option></select>
+              </div>
+              <div class="group"><label>Color</label>
+                <select id="inc_color" required><option value="">Seleccione…</option></select>
+              </div>
+              <div class="group"><label>Guía</label>
+                <select id="inc_guia" required><option value="">Seleccione…</option></select>
+              </div>
+              <div class="group"><label>Clientes PAX</label><input type="number" min="0" id="inc_pax" required></div>
+              <div class="group"><label>Hora de Llegada</label>
+                <input type="text" id="inc_llegada" placeholder="Hora:Minuto" required>
+              </div>
+              <button id="btnRegGrupo">Registrar Grupo</button>
+            </form>
+          </div>
+
+          <!-- TAB REGISTRO -->
+          <div id="itab-registro" class="tab-content">
+            <form id="regForm" class="config-form" onsubmit="return false">
+              <div class="row-turno-grupo" style="display:flex;gap:1rem;flex:0 0 100%;flex-wrap:wrap">
+                <div class="group" style="flex:0 0 200px">
+                  <label>Turno:</label>
+                  <select id="reg_turno" required></select>
+                </div>
+                <div class="group" style="flex:1 1 auto;min-width:260px">
+                  <label>Grupo:</label>
+                  <select id="reg_grupo" required><option value="">Seleccione un grupo</option></select>
+                </div>
+              </div>
+
+              <div id="incContainer">
+                <div class="incRow">
+                  <div class="group cat-col">
+                    <label>Categoría:</label>
+                    <select class="cat" required></select>
+                  </div>
+                  <div class="group coment-col">
+                    <label>Comentario:</label>
+                    <div class="coment-wrapper">
+                      <input class="coment" placeholder="Comentario" required>
+                      <button type="button" class="delInc">✖</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="flex:0 0 100%;display:flex;gap:1rem;justify-content:center;margin-top:1.5rem">
+                <button type="button" id="btnAddInc"  style="background:#7c3aed">➕ Añadir Incidencia</button>
+                <button type="button" id="btnSendInc" style="background:#0b5cff">📢 Reportar Incidencia</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- TAB REPORTE -->
+          <div id="itab-reporte" class="tab-content">
+            <form id="repFiltro" onsubmit="return false">
+              <div class="group"><label>Desde</label><input type="date" id="rep_desde"></div>
+              <div class="group"><label>Hasta</label><input type="date" id="rep_hasta"></div>
+              <div class="group"><label>Turno</label><select id="rep_turno"><option value="">Todos</option></select></div>
+              <div class="group"><label>Grupo</label><select id="rep_grupo"><option value="">Todos</option></select></div>
+              <div class="group"><label>Categoría</label><select id="rep_cat"><option value="">Todas</option></select></div>
+              <div class="group" style="align-self:flex-end"><button id="repBuscar">Buscar</button></div>
+            </form>
+
+            <table id="repIncTable" class="config-table">
+              <thead>
+                <tr>
+                  <th>Fecha</th><th>Turno</th><th>Grupo</th>
+                  <th>Ruta</th><th>Guía</th><th>Color</th>
+                  <th>Categoría</th><th>Comentario</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- CUADRE -->
+      <section id="cuadre" class="section">
+        <div class="card"><h1>Cuadre de Caja</h1></div>
+      </section>
+
+      <!-- CONFIGURACIÓN -->
+      <section id="cfg" class="section">
+        <div class="card">
+          <h1>Configuración</h1>
+          <div class="tabs" id="cfgTabs">
+            <button data-tab="users" class="active">Usuarios</button>
+          </div>
+          <div id="tab-users" class="tab-content active">
+            <form id="userForm" class="config-form">
+              <div class="group"><label>Usuario</label><input id="u_user" required></div>
+              <div class="group"><label>Clave</label><input id="u_pass" required></div>
+              <div class="group"><label>Rol</label>
+                <select id="u_rol"><option>Usuario</option><option>Supervisor</option><option>Admin</option></select>
+              </div>
+              <button id="userSubmit">Agregar/Guardar</button>
+              <button id="userCancel" class="hidden">Cancelar</button>
+            </form>
+            <table class="config-table" id="usersTable">
+              <thead><tr><th>Usuario</th><th>Rol</th><th>Activo</th><th>Acciones</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <script>
+    const $  = q => document.querySelector(q);
+    const $$ = q => document.querySelectorAll(q);
+    const todayISO = () => new Date().toISOString().split('T')[0];
+
+    let CAT_OPTIONS_HTML = '';
+
+    /* ---------- CARGA DE CATÁLOGOS ---------- */
+    async function cargarCatalogo(selectId, endpoint, placeholder='Seleccione…') {
+      const sel = document.getElementById(selectId);
+      if (!sel) return;
+      sel.innerHTML = `<option value="">${placeholder}</option>`;
+      try {
+        const data = await fetch(endpoint).then(r=>r.json());
+        data.forEach(item=>{
+          sel.insertAdjacentHTML('beforeend', `<option value="${item.id}">${item.descripcion}</option>`);
+        });
+      } catch(err){ console.error(`Err cargando ${endpoint}`,err); }
+    }
+
+    async function marcarUsados({selectId, urlTodo, urlDisponibles, placeholder}) {
+      const sel = document.getElementById(selectId);
+      if (!sel) return;
+
+      /* 1. catálogo completo ------------------------------- */
+      sel.innerHTML = `<option value="">${placeholder}</option>`;
+      const todos = await fetch(urlTodo).then(r => r.json());
+      todos.forEach(it => sel.insertAdjacentHTML(
+        'beforeend', `<option value="${it.id}">${it.descripcion}</option>`));
+
+      /* 2. SINCRONIZA “usados / disponibles” ---------------- */
+      const disponibles = await fetch(urlDisponibles).then(r => r.json());
+      const setDisp = new Set(disponibles.map(d => String(d.id)));
+
+      /* 3. primero quita cualquier marca previa ------------- */
+      sel.querySelectorAll('option').forEach(opt => {
+        if (!opt.value) return;          // placeholder
+        opt.disabled = false;
+        delete opt.dataset.usado;        // borra marca vieja
+      });
+
+      /* 4. ahora marca sólo los realmente usados ------------ */
+      sel.querySelectorAll('option').forEach(opt => {
+        if (!opt.value || setDisp.has(opt.value)) return;   // sigue disponible
+        opt.disabled = true;               // bloquea selección
+        opt.dataset.usado = '1';           // para CSS
+      });
+    }
+
+    async function recargarCombosGrupos () {
+      const f = $('#inc_fecha').value || todayISO();
+
+      /* devuelve un Promise con todas las cargas */
+      return Promise.all([
+        marcarUsados({
+          selectId:'inc_grupo',
+          urlTodo:'/api/grupos',
+          urlDisponibles:`/api/grupos-disponibles?fecha=${f}`,
+          placeholder:'Seleccione un grupo'
+        }),
+        marcarUsados({
+          selectId:'inc_ruta',
+          urlTodo:'/api/rutas',
+          urlDisponibles:`/api/rutas-disponibles?fecha=${f}`,
+          placeholder:'Seleccione una ruta'
+        })
+      ]);
+    }
+
+
+
+    async function cargarTurnos() {
+      const data = await fetch('/api/turnos').then(r=>r.json());
+      const sel  = $('#reg_turno');
+      sel.innerHTML = '<option value="">Seleccione turno</option>';
+      data.forEach(t => sel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.descripcion}</option>`));
+
+      const selRep = $('#rep_turno');
+      selRep.innerHTML = '<option value="">Todos</option>';
+      data.forEach(t => selRep.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.descripcion}</option>`));
+    }
+
+    async function cargarCategorias() {
+      const data = await fetch('/api/inc-tipos').then(r=>r.json());
+      CAT_OPTIONS_HTML = '<option value="">Seleccione Categoría</option>' +
+        data.map(c => `<option value="${c.id}">${c.descripcion}</option>`).join('');
+      // set en todas las .cat actuales
+      document.querySelectorAll('#incContainer .cat').forEach(s=>s.innerHTML = CAT_OPTIONS_HTML);
+
+      const selRep = $('#rep_cat');
+      selRep.innerHTML = '<option value="">Todas</option>';
+      data.forEach(c => selRep.insertAdjacentHTML('beforeend', `<option value="${c.id}">${c.descripcion}</option>`));
+    }
+
+    /* Utilidad común ---------------------------------------------------- */
+    async function _llenarSelect(sel, url, placeholder = 'Seleccione…') {
+      if (!sel) return;
+      sel.innerHTML = `<option value="">${placeholder}</option>`;
+      try {
+        const data = await fetch(url).then(r => r.json());
+        data.forEach(it =>
+          sel.insertAdjacentHTML('beforeend',
+            `<option value="${it.id}">${it.descripcion}</option>`));
+      } catch (e) { console.error(e); }
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* 1.  Grupos del día  ───►  si disponibles = true  → solo los que aún
+            NO estén en inc_grupos para esa fecha (endpoint nuevo)
+          si disponibles = false → los registrados en inc_grupos (endpoint antiguo)
+      ———————————————————————————————————————————————————————————————— */
+    async function cargarGruposHoy(
+            fecha = todayISO(),
+            selectorId = 'reg_grupo',
+            disponibles = false) {
+
+      const sel = document.getElementById(selectorId);
+      const endpoint = disponibles
+            ? `/api/grupos-disponibles?fecha=${fecha}`   // NO usados todavía
+            : `/api/grupos-dia?fecha=${fecha}`;          // ya registrados
+
+      await _llenarSelect(sel, endpoint,
+            disponibles ? 'Seleccione un grupo disponible'
+                        : 'Seleccione un grupo');
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* 2.  Rutas disponibles del día  (nueva función, mismo estilo)       */
+    async function cargarRutasHoy(
+            fecha = todayISO(),
+            selectorId = 'inc_ruta') {
+
+      const sel = document.getElementById(selectorId);
+      const endpoint = `/api/rutas-disponibles?fecha=${fecha}`;   // NO usadas hoy
+
+      await _llenarSelect(sel, endpoint, 'Seleccione una ruta');
+    }
+
+
+    /* ---------- FECHA & HORA ---------- */
+    $('#inc_fecha').value = todayISO();
+    $('#inc_llegada').addEventListener('blur',()=>{
+      let v = $('#inc_llegada').value.replace(/[^0-9]/g,'');
+      if(!v) return;
+      $('#inc_llegada').value = v.length===3
+        ? `${parseInt(v[0],10)}:${v.slice(1)}`
+        : v.length===4 ? `${v.slice(0,2)}:${v.slice(2)}` : $('#inc_llegada').value;
+    });
+
+    /* ---------- INCIDENCIAS DINÁMICAS (REGISTRO) ---------- */
+    const incContainer   = $('#incContainer');
+    const incRowTemplate = incContainer.firstElementChild.cloneNode(true);
+
+    $('#btnAddInc').onclick = () => {
+      const c = incRowTemplate.cloneNode(true);
+      const catEl = c.querySelector('.cat');
+      const comEl = c.querySelector('.coment');
+      if (catEl) catEl.innerHTML = CAT_OPTIONS_HTML;
+      if (comEl) comEl.value = '';
+      incContainer.appendChild(c);
+    };
+
+    incContainer.addEventListener('click', e=>{
+      if(!e.target.classList.contains('delInc')) return;
+      const filas = incContainer.querySelectorAll('.incRow');
+      if(filas.length===1){
+        filas[0].querySelector('.cat').selectedIndex=0;
+        filas[0].querySelector('.coment').value='';
+      }else e.target.closest('.incRow').remove();
+    });
+
+    /* -------- RESET FORMULARIO GRUPOS (async) -------- */
+    async function resetGrupoForm () {
+      const f = $('#incidenciaForm');
+      f.reset();                                  // limpia inputs “value”
+
+      const hoy = todayISO();
+      $('#inc_fecha').value = hoy;                // fecha = hoy
+
+      /* 1 ▸ recarga catálogos “estáticos” */
+      await Promise.all([
+        cargarCatalogo('inc_color','/api/colores'),
+        cargarCatalogo('inc_guia', '/api/guias')
+      ]);
+
+      /* 2 ▸ recarga Ruta y Grupo (y espera) */
+      await recargarCombosGrupos();
+
+      /* 3 ▸ fuerza todos los selects a la 1.ª opción */
+      ['inc_ruta','inc_grupo','inc_color','inc_guia'].forEach(id=>{
+        const sel = document.getElementById(id);
+        if (sel) sel.selectedIndex = 0;           // “Seleccione…”
+      });
+
+      /* 4 ▸ limpia los dos inputs num/hora */
+      $('#inc_pax').value     = '';
+      $('#inc_llegada').value = '';
+    }
+
+    function resetRegistroForm(){
+      $('#reg_turno').value = '';
+      cargarGruposHoy(todayISO());
+      incContainer.innerHTML = '';
+      const row = incRowTemplate.cloneNode(true);
+      row.querySelector('.cat').innerHTML = CAT_OPTIONS_HTML;
+      row.querySelector('.coment').value  = '';
+      incContainer.appendChild(row);
+    }
+
+    $('#btnRegGrupo').onclick = async () => {
+      const formGrupos = $('#incidenciaForm');
+      if (!formGrupos.reportValidity()) return;
+
+      const fecha  = $('#inc_fecha').value;
+      const ruta   = $('#inc_ruta').value;
+      const grupo  = $('#inc_grupo').value;
+      const color  = $('#inc_color').value;
+      const guia   = $('#inc_guia').value;
+      const pax    = $('#inc_pax').value;
+      const hora   = $('#inc_llegada').value;
+
+      if (!fecha || !ruta || !grupo || !color || !guia || !hora) {
+        alert('Complete todos los campos.');
+        return;
+      }
+
+      try{
+        await fetch('/api/inc-grupos',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            fecha,
+            ruta_id:  parseInt(ruta),
+            grupo_id: parseInt(grupo),
+            color_id: parseInt(color),
+            guia_id:  parseInt(guia),
+            pax:      parseInt(pax||0),
+            hora_llegada: hora
+          })
+        });
+        alert('✅ Grupo registrado');
+        await resetGrupoForm();                       // ← ahora sí limpia todo
+        recargarCombosGrupos(); // actualiza y deja usados en gris
+        cargarGruposHoy($('#inc_fecha').value,'reg_grupo'); // combo en Registro
+      }catch(err){console.error(err);alert('Error al registrar grupo');}
+    };
+
+    $('#btnSendInc').onclick = async () => {
+      const formRegistro = $('#regForm');
+      if (!formRegistro.reportValidity()) return;
+
+      const turno_id = $('#reg_turno').value;
+      const grupo_id = $('#reg_grupo').value;
+
+      const dets = [...incContainer.querySelectorAll('.incRow')]
+        .map(r=>{
+          const categoria_id = r.querySelector('.cat')?.value;
+          const comentario   = r.querySelector('.coment')?.value.trim();
+          return (categoria_id && comentario) ? {categoria_id, comentario} : null;
+        }).filter(Boolean);
+
+      if (!turno_id || !grupo_id || !dets.length) {
+        alert('Complete turno, grupo y al menos una incidencia');
+        return;
+      }
+
+      await fetch('/api/incidencias',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({ turno_id, grupo_id, incidencias:dets })
+      });
+
+      alert('✅ Incidencias enviadas');
+      resetRegistroForm();
+    };
+
+    /* ---------- LOGIN ---------- */
+    $('#loginForm').addEventListener('submit',async e=>{
+      e.preventDefault();
+      $('#loginError').classList.add('hidden');
+      const usuario=$('#user').value.trim(), clave=$('#pass').value.trim();
+      if(!usuario||!clave) return $('#loginError').classList.remove('hidden');
+      const res=await fetch('/api/login',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({usuario,clave})
+      });
+      if(!res.ok) return $('#loginError').classList.remove('hidden');
+      iniciarApp();
+    });
+
+    function iniciarApp(){
+      $('#loginForm').classList.add('hidden');
+      $('#menu').style.display='flex';
+      $('.sections').style.display='block';
+      mostrar('incidencias');
+
+      recargarCombosGrupos();
+      cargarCatalogo('inc_color','/api/colores');
+      cargarCatalogo('inc_guia','/api/guias');
+      cargarCatalogo('rep_grupo','/api/grupos','Todos');
+
+      cargarTurnos();
+      cargarCategorias();
+      cargarGruposHoy(todayISO());
+    }
+
+    $('#btnLogout').onclick=()=>{
+      $('#loginForm').classList.remove('hidden');
+      $('#menu').style.display='none';
+      $('.sections').style.display='none';
+      $('#loginForm').reset();
+    };
+
+    /* ---------- NAV PRINCIPAL ---------- */
+    $('#menu').onclick=e=>{
+      const sec=e.target.dataset.sec;if(!sec) return;mostrar(sec);
+    };
+    function mostrar(sec){
+      $$('.section').forEach(s=>s.classList.toggle('active',s.id===sec));
+      $$('#menu button[data-sec]').forEach(b=>b.classList.toggle('active',b.dataset.sec===sec));
+      if(sec==='cfg') loadUsers();
+    }
+
+    /* ---------- TABS INCIDENCIAS ---------- */
+    $('#incidTabs').onclick=e=>{
+      const itab=e.target.dataset.itab;if(!itab) return;
+      $('#incidTabs .active')?.classList.remove('active');
+      e.target.classList.add('active');
+      ['grupos','registro','reporte'].forEach(id=>{
+        $('#itab-'+id).classList.toggle('active',id===itab);
+      });
+      if(itab==='reporte'){ initReporte(); }
+      if(itab==='registro'){ cargarGruposHoy($('#inc_fecha').value); }
+      if(itab==='grupos'){
+        recargarCombosGrupos();                 // muestra todo y des‑habilita los usados
+        cargarCatalogo('inc_color','/api/colores');
+        cargarCatalogo('inc_guia','/api/guias');
+      }
+    };
+
+    /* ---------- CRUD USUARIOS ---------- */
+    let usuariosCache=[],editUser=null;
+    async function loadUsers(){
+      usuariosCache=await fetch('/api/usuarios').then(r=>r.json());
+      const tb=$('#usersTable tbody');tb.innerHTML='';
+      usuariosCache.forEach(u=>{
+        tb.insertAdjacentHTML('beforeend',`
+          <tr>
+            <td>${u.usuario}</td><td>${u.rol}</td><td>${u.activo?'✔':'✖'}</td>
+            <td>
+              <button class="edit" data-u="${u.usuario}">✏</button>
+              <button class="toggle" data-u="${u.usuario}">${u.activo?'🚫':'✔'}</button>
+            </td>
+          </tr>`);});
+      tb.querySelectorAll('.edit').forEach(b=>b.onclick=()=>fillUserForm(b.dataset.u));
+      tb.querySelectorAll('.toggle').forEach(b=>b.onclick=()=>toggleUser(b.dataset.u));
+    }
+    function fillUserForm(username){
+      const u=usuariosCache.find(x=>x.usuario===username);
+      if(!u) return;
+      $('#u_user').value=u.usuario;$('#u_user').readOnly=true;
+      $('#u_pass').value=u.clave;$('#u_rol').value=u.rol;
+      editUser=username;$('#userSubmit').textContent='Guardar';$('#userCancel').classList.remove('hidden');
+    }
+    $('#userCancel').onclick=e=>{e.preventDefault();resetUserForm();};
+    function resetUserForm(){
+      $('#u_user').readOnly=false;$('#u_user').value='';$('#u_pass').value='';
+      $('#u_rol').value='Usuario';editUser=null;
+      $('#userSubmit').textContent='Agregar/Guardar';$('#userCancel').classList.add('hidden');
+    }
+    $('#userForm').onsubmit=async e=>{
+      e.preventDefault();
+      const usuario=$('#u_user').value.trim(),clave=$('#u_pass').value.trim(),rol=$('#u_rol').value;
+      if(editUser){
+        await fetch(`/api/usuarios/${encodeURIComponent(editUser)}`,{
+          method:'PUT',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({clave,rol,activo:true})});
+      }else{
+        await fetch('/api/usuarios',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({usuario,clave,rol})});
+      }
+      resetUserForm();loadUsers();
+    };
+    async function toggleUser(username){
+      const u=usuariosCache.find(x=>x.usuario===username);
+      await fetch(`/api/usuarios/${encodeURIComponent(username)}`,{
+        method:'PUT',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({clave:u.clave,rol:u.rol,activo:!u.activo})});
+      loadUsers();
+    }
+
+    $('#cfgTabs').onclick=e=>{
+      const tab=e.target.dataset.tab;if(!tab) return;
+      $('#cfgTabs .active')?.classList.remove('active');
+      e.target.classList.add('active');
+      $$('#cfg .tab-content').forEach(tc=>tc.classList.toggle('active',tc.id==='tab-'+tab));
+      if(tab==='users') loadUsers();
+    };
+
+    /* ---------- REPORTE ---------- */
+    function initReporte(){
+      if(!$('#rep_desde').value) $('#rep_desde').value = todayISO();
+      if(!$('#rep_hasta').value) $('#rep_hasta').value = todayISO();
+      cargarTurnos();
+      cargarCategorias();
+      cargarCatalogo('rep_grupo','/api/grupos','Todos');
+      buscarReporte();
+    }
+
+    $('#repBuscar').onclick = e=>{
+      e.preventDefault();
+      buscarReporte();
+    };
+
+    async function buscarReporte(){
+      const d1 = $('#rep_desde').value || todayISO();
+      const d2 = $('#rep_hasta').value || d1;
+      const turno = $('#rep_turno').value;
+      const grupo = $('#rep_grupo').value;
+      const cat   = $('#rep_cat').value;
+
+      const qs = new URLSearchParams({desde:d1,hasta:d2});
+      if (turno) qs.append('turno_id', turno);
+      if (grupo) qs.append('grupo_id', grupo);
+      if (cat)   qs.append('categoria_id', cat);
+
+      try{
+        const res  = await fetch('/api/incidencias-reporte?' + qs.toString());
+        if(!res.ok){
+          console.error('Error HTTP', res.status, await res.text());
+          return;
+        }
+        const rows = await res.json();
+        const tb   = $('#repIncTable tbody');
+        tb.innerHTML = '';
+        rows.forEach(r=>{
+          tb.insertAdjacentHTML('beforeend', `
+            <tr>
+              <td>${r.fecha||''}</td>
+              <td>${r.turno||''}</td>
+              <td>${r.grupo||''}</td>
+              <td>${r.ruta||''}</td>
+              <td>${r.guia||''}</td>
+              <td>${r.color||''}</td>
+              <td>${r.categoria||''}</td>
+              <td style="text-align:left">${r.comentario||''}</td>
+            </tr>`);
+        });
+      }catch(err){
+        console.error(err);
+      }
+    }
+  </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
