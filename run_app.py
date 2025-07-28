@@ -83,60 +83,52 @@ def api_grupos_dia():
     """, (fecha,)).fetchall()
     return jsonify([dict(r) for r in rows])
 
-@app.get("/api/incidencias-reporte")
+@app.get('/api/incidencias-reporte')
 def api_incidencias_reporte():
-    d1 = request.args.get("desde") or date.today().isoformat()
-    d2 = request.args.get("hasta") or d1
+    d1 = request.args.get('desde') or date.today().isoformat()
+    d2 = request.args.get('hasta') or d1
 
-    turno    = request.args.get("turno_id")
-    grupo    = request.args.get("grupo_id")
-    categoria= request.args.get("categoria_id")
+    turno_txt = request.args.get('turno')          #  ← “Turno 1”, “Turno 2 …”
+    grupo_id  = request.args.get('grupo_id')
+    cat_id    = request.args.get('categoria_id')
 
-    sql = """
-      SELECT
-          I.fecha,
-          I.turno,
-          G.descripcion            AS grupo,
-          R.descripcion            AS ruta,
-          Col.descripcion          AS color,
-          Gu.descripcion           AS guia,
-          T.descripcion            AS categoria,
-          I.comentario
-      FROM incidencias I
-      JOIN grupos        G  ON G.id = I.grupo_id
+    filtros = []
+    params  = [d1, d2]
 
-      /* ── UNA sola fila de inc_grupos que coincide en fecha y grupo ── */
-      LEFT JOIN inc_grupos IG
-             ON IG.id = (
-                 SELECT id
-                 FROM   inc_grupos
-                 WHERE  fecha    = I.fecha
-                   AND  grupo_id = I.grupo_id
-                 ORDER  BY id DESC              -- la más reciente
-                 LIMIT 1
-             )
+    if turno_txt:                       # ▲ usa texto, NO id
+        filtros.append('I.turno = ?')
+        params.append(turno_txt)        #     (“Turno 1”)
 
-      LEFT JOIN rutas     R   ON R.id   = IG.ruta_id
-      LEFT JOIN colores   Col ON Col.id = IG.color_id
-      LEFT JOIN guias     Gu  ON Gu.id  = IG.guia_id
-      LEFT JOIN inc_tipos T   ON T.id   = I.inc_tipo_id
-      WHERE I.fecha BETWEEN ? AND ?
-    """
+    if grupo_id:
+        filtros.append('I.grupo_id = ?')
+        params.append(int(grupo_id))
 
-    params = [d1, d2]
+    if cat_id:
+        filtros.append('I.inc_tipo_id = ?')
+        params.append(int(cat_id))
 
-    if turno:
-        sql += " AND I.turno = ?"
-        params.append(turno)
-    if grupo:
-        sql += " AND I.grupo_id = ?"
-        params.append(grupo)
-    if categoria:
-        sql += " AND I.inc_tipo_id = ?"
-        params.append(categoria)
+    extra = (' AND ' + ' AND '.join(filtros)) if filtros else ''
 
-    sql += " ORDER BY I.fecha, I.id"
-
+    sql = f'''
+        SELECT I.fecha,
+               I.turno                       AS turno,      -- ya es texto
+               G.descripcion                 AS grupo,
+               R.descripcion                 AS ruta,
+               GU.descripcion                AS guia,
+               C.descripcion                 AS color,
+               IT.descripcion                AS categoria,
+               I.comentario
+          FROM incidencias   I
+          JOIN grupos        G  ON G.id = I.grupo_id
+          LEFT JOIN inc_grupos IG ON IG.fecha = I.fecha
+                                AND IG.grupo_id = I.grupo_id
+          LEFT JOIN rutas     R  ON R.id = IG.ruta_id
+          LEFT JOIN guias     GU ON GU.id = IG.guia_id
+          LEFT JOIN colores   C  ON C.id = IG.color_id
+          JOIN inc_tipos      IT ON IT.id = I.inc_tipo_id
+         WHERE I.fecha BETWEEN ? AND ? {extra}
+         ORDER BY I.fecha, I.id
+    '''
     rows = get_db().execute(sql, params).fetchall()
     return jsonify([dict(r) for r in rows])
 

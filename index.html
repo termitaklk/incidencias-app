@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
   <title>Proyecto 2 – Panel</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <!-- antes del cierre de <head> (si aún no lo tienes) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.min.js"></script>
 
 <style>
   /* ---------- BASE ---------- */
@@ -261,14 +263,21 @@
               <div class="group"><label>Grupo</label><select id="rep_grupo"><option value="">Todos</option></select></div>
               <div class="group"><label>Categoría</label><select id="rep_cat"><option value="">Todas</option></select></div>
               <div class="group" style="align-self:flex-end"><button id="repBuscar">Buscar</button></div>
+              <!-- ⬇️  nuevo -->
+              <div class="group" style="align-self:flex-end"><button id="repExport" style="background:#0b5cff">Exportar Excel</button></div>
             </form>
 
             <table id="repIncTable" class="config-table">
               <thead>
                 <tr>
-                  <th>Fecha</th><th>Turno</th><th>Grupo</th>
-                  <th>Ruta</th><th>Guía</th><th>Color</th>
-                  <th>Categoría</th><th>Comentario</th>
+                  <th>Fecha</th>
+                  <th>Categoría</th>          <!-- ← ahora va de segunda -->
+                  <th>Turno</th>
+                  <th>Grupo</th>
+                  <th>Ruta</th>
+                  <th>Guía</th>
+                  <th>Color</th>
+                  <th>Comentario</th>
                 </tr>
               </thead>
               <tbody></tbody>
@@ -380,18 +389,22 @@
       ]);
     }
 
+    async function cargarTurnos () {
+      const lista = await fetch('/api/turnos').then(r=>r.json());
 
+      /* --- Registro (sigue con value=id) --- */
+      const selReg = $('#reg_turno');
+      selReg.innerHTML =
+        '<option value="">Seleccione turno</option>' +
+        lista.map(t => `<option value="${t.id}">${t.descripcion}</option>`).join('');
 
-    async function cargarTurnos() {
-      const data = await fetch('/api/turnos').then(r=>r.json());
-      const sel  = $('#reg_turno');
-      sel.innerHTML = '<option value="">Seleccione turno</option>';
-      data.forEach(t => sel.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.descripcion}</option>`));
-
+      /* --- Reporte → value = descripción --- */
       const selRep = $('#rep_turno');
-      selRep.innerHTML = '<option value="">Todos</option>';
-      data.forEach(t => selRep.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.descripcion}</option>`));
+      selRep.innerHTML =
+        '<option value="">Todos</option>' +
+        lista.map(t => `<option value="${t.descripcion}">${t.descripcion}</option>`).join('');
     }
+
 
     async function cargarCategorias() {
       const data = await fetch('/api/inc-tipos').then(r=>r.json());
@@ -734,7 +747,7 @@
       const cat   = $('#rep_cat').value;
 
       const qs = new URLSearchParams({desde:d1,hasta:d2});
-      if (turno) qs.append('turno_id', turno);
+      if (turno) qs.append('turno', turno);
       if (grupo) qs.append('grupo_id', grupo);
       if (cat)   qs.append('categoria_id', cat);
 
@@ -751,12 +764,12 @@
           tb.insertAdjacentHTML('beforeend', `
             <tr>
               <td>${r.fecha||''}</td>
+              <td>${r.categoria||''}</td>
               <td>${r.turno||''}</td>
               <td>${r.grupo||''}</td>
               <td>${r.ruta||''}</td>
               <td>${r.guia||''}</td>
               <td>${r.color||''}</td>
-              <td>${r.categoria||''}</td>
               <td style="text-align:left">${r.comentario||''}</td>
             </tr>`);
         });
@@ -764,6 +777,68 @@
         console.error(err);
       }
     }
+
+    /* ------------------------------------------------------------
+   EXPORTAR REPORTE A EXCEL
+   ------------------------------------------------------------ */
+    document.getElementById('repExport').onclick = () => {
+      const tbl = document.getElementById('repIncTable');
+      if (!tbl.tBodies[0].rows.length){
+        alert('No hay datos para exportar'); return;
+      }
+
+      /* 1 ▸ hoja a partir de la tabla */
+      const ws = XLSX.utils.table_to_sheet(tbl);
+
+      /* 2 ▸ colores */
+      const C_HEADER = '7C3AED';   // morado
+      const C_ROW    = 'E0D7FB';   // lila muy claro
+      const C_WHITE  = 'FFFFFF';
+
+      const rango = XLSX.utils.decode_range(ws['!ref']);
+      const filaHeader = rango.s.r;
+      const filaFin    = rango.e.r;
+
+      /* 3 ▸ formateo */
+      for(let R=filaHeader; R<=filaFin; ++R){
+        for(let C=rango.s.c; C<=rango.e.c; ++C){
+          const addr = XLSX.utils.encode_cell({r:R,c:C});
+          const cell = ws[addr]; if(!cell) continue;
+
+          cell.s = cell.s || {};
+          cell.s.border = {top:{style:'thin',color:{auto:1}},
+                          bottom:{style:'thin',color:{auto:1}},
+                          left:{style:'thin',color:{auto:1}},
+                          right:{style:'thin',color:{auto:1}}};
+          cell.s.alignment = {horizontal:'center',vertical:'center',wrapText:false};
+
+          if(R===filaHeader){
+            cell.s.fill = {fgColor:{rgb:C_HEADER}};
+            cell.s.font = {bold:true,color:{rgb:C_WHITE}};
+          }else if(R%2){
+            cell.s.fill = {fgColor:{rgb:C_ROW}};
+          }
+        }
+      }
+
+      /* 4 ▸ auto‑ancho simple */
+      ws['!cols'] = [];
+      for(let C=rango.s.c; C<=rango.e.c; ++C){
+        let maxLen=8;
+        for(let R=rango.s.r; R<=rango.e.r; ++R){
+          const v = ws[XLSX.utils.encode_cell({r:R,c:C})]?.v;
+          maxLen = Math.max(maxLen, String(v||'').length);
+        }
+        ws['!cols'].push({wch:maxLen+2});
+      }
+
+      /* 5 ▸ libro y descarga */
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Reporte');
+      const hoy = todayISO();
+      XLSX.writeFile(wb, `reporte_incidencias_${hoy}.xlsx`);
+    };
+
   </script>
 </body>
 </html>
