@@ -298,6 +298,75 @@
           <h1>Configuración</h1>
           <div class="tabs" id="cfgTabs">
             <button data-tab="users" class="active">Usuarios</button>
+            <button data-tab="guias">Guías</button>
+            <button data-tab="colores">Colores</button>
+            <button data-tab="grupos">Grupos</button>   <!-- 🆕 -->
+            <button data-tab="rutas">Rutas</button>     <!-- 🆕 -->
+            <button data-tab="turnos">Turnos</button>   <!-- 🆕 -->
+          </div>
+          <!-- 🆕 ========== GRUPOS ========== -->
+          <div id="tab-grupos" class="tab-content">
+            <form id="grupoForm" class="config-form">
+              <div class="group"><label>Grupo</label><input id="g_desc" required></div>
+              <button id="grupoSubmit">Agregar/Guardar</button>
+              <button id="grupoCancel" class="hidden">Cancelar</button>
+            </form>
+            <table class="config-table" id="gruposTable">
+              <thead><tr><th>Grupo</th><th>Activo</th><th>Acciones</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <!-- 🆕 ========== RUTAS ========== -->
+          <div id="tab-rutas" class="tab-content">
+            <form id="rutaForm" class="config-form">
+              <div class="group"><label>Ruta</label><input id="r_desc" required></div>
+              <button id="rutaSubmit">Agregar/Guardar</button>
+              <button id="rutaCancel" class="hidden">Cancelar</button>
+            </form>
+            <table class="config-table" id="rutasTable">
+              <thead><tr><th>Ruta</th><th>Activo</th><th>Acciones</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+
+          <!-- 🆕 ========== TURNOS ========== -->
+          <div id="tab-turnos" class="tab-content">
+            <form id="turnoForm" class="config-form">
+              <div class="group"><label>Turno</label><input id="t_desc" required></div>
+              <button id="turnoSubmit">Agregar/Guardar</button>
+              <button id="turnoCancel" class="hidden">Cancelar</button>
+            </form>
+            <table class="config-table" id="turnosTable">
+              <thead><tr><th>Turno</th><th>Activo</th><th>Acciones</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <!-- ─────── TAB GUIAS ───────────────────────────────────────────── -->
+          <div id="tab-guias" class="tab-content">
+            <form id="guiaForm" class="config-form">
+              <div class="group"><label>Guía</label><input id="g_nombre" required></div>
+              <button id="guiaSubmit">Agregar/Guardar</button>
+              <button id="guiaCancel" class="hidden">Cancelar</button>
+            </form>
+
+            <table class="config-table" id="guiasTable">
+              <thead><tr><th>Guía</th><th>Activo</th><th>Acciones</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <!-- ─────── TAB COLORES ─────────────────────────────────────────── -->
+          <div id="tab-colores" class="tab-content">
+            <form id="colorForm" class="config-form">
+              <div class="group"><label>Color</label><input id="c_nombre" required></div>
+              <button id="colorSubmit">Agregar/Guardar</button>
+              <button id="colorCancel" class="hidden">Cancelar</button>
+            </form>
+
+            <table class="config-table" id="coloresTable">
+              <thead><tr><th>Color</th><th>Activo</th><th>Acciones</th></tr></thead>
+              <tbody></tbody>
+            </table>
           </div>
           <div id="tab-users" class="tab-content active">
             <form id="userForm" class="config-form">
@@ -327,18 +396,34 @@
 
     let CAT_OPTIONS_HTML = '';
 
-    /* ---------- CARGA DE CATÁLOGOS ---------- */
+    /* helper genérico ------------------------------------------- */
     async function cargarCatalogo(selectId, endpoint, placeholder='Seleccione…') {
       const sel = document.getElementById(selectId);
       if (!sel) return;
+
       sel.innerHTML = `<option value="">${placeholder}</option>`;
+
       try {
-        const data = await fetch(endpoint).then(r=>r.json());
-        data.forEach(item=>{
-          sel.insertAdjacentHTML('beforeend', `<option value="${item.id}">${item.descripcion}</option>`);
+        const data = await fetch(endpoint).then(r => r.json());
+        // ⬇️  SOLO los que están activos
+        data.filter(it => Number(it.activo)).forEach(item => {
+          sel.insertAdjacentHTML(
+            'beforeend',
+            `<option value="${item.id}">${item.descripcion}</option>`
+          );
         });
-      } catch(err){ console.error(`Err cargando ${endpoint}`,err); }
+      } catch (err) {
+        console.error(`Error cargando ${endpoint}`, err);
+      }
     }
+
+    function refrescarCombos() {
+      cargarCatalogo('inc_ruta','/api/rutas');
+      cargarCatalogo('inc_grupo','/api/grupos');
+      cargarCatalogo('reg_grupo','/api/grupos','Seleccione un grupo');
+      cargarTurnos();                 // reg_turno + rep_turno
+    }
+
 
     async function marcarUsados({selectId, urlTodo, urlDisponibles, placeholder}) {
       const sel = document.getElementById(selectId);
@@ -661,9 +746,327 @@
         recargarCombosGrupos();                 // muestra todo y des‑habilita los usados
         cargarCatalogo('inc_color','/api/colores');
         cargarCatalogo('inc_guia','/api/guias');
+        refrescarCombos();
       }
     };
 
+    /* =========================================================================================
+   ===============          CRUD  GRUPOS        ============================================
+   =========================================================================================*/
+
+    let gruposCache=[], editGrupo=null;
+
+    async function loadGrupos(){
+      gruposCache = await fetch('/api/grupos').then(r=>r.json());
+      const tb = $('#gruposTable tbody'); tb.innerHTML='';
+      gruposCache.forEach(g=>{
+        tb.insertAdjacentHTML('beforeend',`
+          <tr>
+            <td>${g.descripcion}</td>
+            <td>${g.activo ? '✔' : '✖'}</td>
+            <td>
+              <button class="edit"   data-id="${g.id}">✏</button>
+              <button class="toggle" data-id="${g.id}">${g.activo ? '🚫' : '✔'}
+              </button>
+            </td>
+          </tr>`);
+      });
+      tb.querySelectorAll('.edit')  .forEach(b=>b.onclick=()=>fillGrupoForm(b.dataset.id));
+      tb.querySelectorAll('.toggle').forEach(b=>b.onclick=()=>toggleGrupo(b.dataset.id));
+    }
+
+    function fillGrupoForm(id){
+      const g = gruposCache.find(x=>x.id==id);
+      $('#g_desc').value = g.descripcion;
+      editGrupo = id;
+      $('#grupoSubmit').textContent='Guardar';
+      $('#grupoCancel').classList.remove('hidden');
+    }
+    $('#grupoCancel').onclick = e => {e.preventDefault();resetGrupoForm();};
+    function resetGrupoForm(){
+      $('#g_desc').value=''; editGrupo=null;
+      $('#grupoSubmit').textContent='Agregar/Guardar';
+      $('#grupoCancel').classList.add('hidden');
+    }
+
+    $('#grupoForm').onsubmit = async e=>{
+      e.preventDefault();
+      const descripcion = $('#g_desc').value.trim();
+      if (editGrupo){
+        await fetch(`/api/grupos/${editGrupo}`,{
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({descripcion, activo:1})
+        });
+      }else{
+        await fetch('/api/grupos',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({descripcion})
+        });
+      }
+      resetGrupoForm(); loadGrupos();
+    };
+
+    async function toggleGrupo(id){
+      const g = gruposCache.find(x=>x.id==id);
+      await fetch(`/api/grupos/${id}`,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({descripcion:g.descripcion, activo: g.activo?0:1})
+      });
+      loadGrupos();
+    }
+
+    /* =========================================================================================
+      ===============          CRUD  RUTAS        =============================================
+      =========================================================================================*/
+    let rutasCache=[], editRuta=null;
+    async function loadRutas(){
+      rutasCache = await fetch('/api/rutas').then(r=>r.json());
+      const tb = $('#rutasTable tbody'); tb.innerHTML='';
+      rutasCache.forEach(r=>{
+        tb.insertAdjacentHTML('beforeend',`
+          <tr>
+            <td>${r.descripcion}</td>
+            <td>${r.activo?'✔':'✖'}</td>
+            <td>
+              <button class="edit"   data-id="${r.id}">✏</button>
+              <button class="toggle" data-id="${r.id}">
+                ${r.activo?'🚫':'✔'}
+              </button>
+            </td>
+          </tr>`);
+      });
+      tb.querySelectorAll('.edit')  .forEach(b=>b.onclick=()=>fillRutaForm(b.dataset.id));
+      tb.querySelectorAll('.toggle').forEach(b=>b.onclick=()=>toggleRuta(b.dataset.id));
+    }
+    function fillRutaForm(id){
+      const r = rutasCache.find(x=>x.id==id);
+      $('#r_desc').value = r.descripcion;
+      editRuta = id;
+      $('#rutaSubmit').textContent='Guardar';
+      $('#rutaCancel').classList.remove('hidden');
+    }
+    $('#rutaCancel').onclick = e=>{e.preventDefault();resetRutaForm();};
+    function resetRutaForm(){
+      $('#r_desc').value=''; editRuta=null;
+      $('#rutaSubmit').textContent='Agregar/Guardar';
+      $('#rutaCancel').classList.add('hidden');
+    }
+    $('#rutaForm').onsubmit = async e=>{
+      e.preventDefault();
+      const descripcion = $('#r_desc').value.trim();
+      if(editRuta){
+        await fetch(`/api/rutas/${editRuta}`,{
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({descripcion, activo:1})
+        });
+      }else{
+        await fetch('/api/rutas',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({descripcion})
+        });
+      }
+      resetRutaForm(); loadRutas(); refrescarCombos();
+    };
+    async function toggleRuta(id){
+      const r = rutasCache.find(x=>x.id==id);
+      await fetch(`/api/rutas/${id}`,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({descripcion:r.descripcion, activo:r.activo?0:1})
+      });
+      loadRutas(); refrescarCombos();
+    }
+
+    /* =========================================================================================
+      ===============          CRUD  TURNOS        =============================================
+      =========================================================================================*/
+    let turnosCache=[], editTurno=null;
+    async function loadTurnos(){
+      turnosCache = await fetch('/api/turnos').then(r=>r.json());
+      const tb = $('#turnosTable tbody'); tb.innerHTML='';
+      turnosCache.forEach(t=>{
+        tb.insertAdjacentHTML('beforeend',`
+          <tr>
+            <td>${t.descripcion}</td>
+            <td>${t.activo?'✔':'✖'}</td>
+            <td>
+              <button class="edit"   data-id="${t.id}">✏</button>
+              <button class="toggle" data-id="${t.id}">
+                ${t.activo?'🚫':'✔'}
+              </button>
+            </td>
+          </tr>`);
+      });
+      tb.querySelectorAll('.edit')  .forEach(b=>b.onclick=()=>fillTurnoForm(b.dataset.id));
+      tb.querySelectorAll('.toggle').forEach(b=>b.onclick=()=>toggleTurno(b.dataset.id));
+    }
+    function fillTurnoForm(id){
+      const t = turnosCache.find(x=>x.id==id);
+      $('#t_desc').value=t.descripcion;
+      editTurno=id;
+      $('#turnoSubmit').textContent='Guardar';
+      $('#turnoCancel').classList.remove('hidden');
+    }
+    $('#turnoCancel').onclick = e=>{e.preventDefault();resetTurnoForm();};
+    function resetTurnoForm(){
+      $('#t_desc').value=''; editTurno=null;
+      $('#turnoSubmit').textContent='Agregar/Guardar';
+      $('#turnoCancel').classList.add('hidden');
+    }
+    $('#turnoForm').onsubmit = async e=>{
+      e.preventDefault();
+      const descripcion = $('#t_desc').value.trim();
+      if(editTurno){
+        await fetch(`/api/turnos/${editTurno}`,{
+          method:'PUT',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({descripcion, activo:1})
+        });
+      }else{
+        await fetch('/api/turnos',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({descripcion})
+        });
+      }
+      resetTurnoForm(); loadTurnos();
+    };
+    async function toggleTurno(id){
+      const t = turnosCache.find(x=>x.id==id);
+      await fetch(`/api/turnos/${id}`,{
+        method:'PUT',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({descripcion:t.descripcion, activo:t.activo?0:1})
+      });
+      loadTurnos();
+    }
+
+    /* ====================== CRUD COLORES ==================== */
+    let coloresCache=[], editColor=null;
+
+    async function loadColores(){
+      coloresCache = await fetch('/api/colores').then(r=>r.json());
+      const tb = $('#coloresTable tbody'); tb.innerHTML='';
+      coloresCache.forEach(c=>{
+        tb.insertAdjacentHTML('beforeend',`
+          <tr>
+            <td>${c.descripcion}</td><td>${c.activo?'✔':'✖'}</td>
+            <td>
+              <button class="edit"   data-id="${c.id}">✏</button>
+              <button class="toggle" data-id="${c.id}">${c.activo?'🚫':'✔'}</button>
+            </td>
+          </tr>`);});
+      tb.querySelectorAll('.edit')  .forEach(b=>b.onclick=()=>fillColorForm(b.dataset.id));
+      tb.querySelectorAll('.toggle').forEach(b=>b.onclick=()=>toggleColor(b.dataset.id));
+    }
+
+    function fillColorForm(id){
+      const c = coloresCache.find(x=>x.id==id);
+      if(!c) return;
+      $('#c_nombre').value = c.descripcion;
+      editColor = id;
+      $('#colorSubmit').textContent='Guardar';
+      $('#colorCancel').classList.remove('hidden');
+    }
+
+    $('#colorCancel').onclick = e=>{e.preventDefault();resetColorForm();};
+    function resetColorForm(){
+      $('#c_nombre').value=''; editColor=null;
+      $('#colorSubmit').textContent='Agregar/Guardar';
+      $('#colorCancel').classList.add('hidden');
+    }
+
+    $('#colorForm').onsubmit = async e=>{
+      e.preventDefault();
+      const nombre = $('#c_nombre').value.trim();
+      if(editColor){
+        await fetch(`/api/colores/${editColor}`,{
+          method:'PUT',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({descripcion:nombre,activo:true})
+        });
+      }else{
+        await fetch('/api/colores',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({descripcion:nombre})
+        });
+      }
+      resetColorForm(); loadColores();
+    };
+
+    async function toggleColor(id){
+      const c = coloresCache.find(x=>x.id==id);
+      await fetch(`/api/colores/${id}`,{
+        method:'PUT',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({descripcion:c.descripcion,activo:!c.activo})
+      });
+      loadColores();
+    }
+
+    /* ====================== CRUD GUÍAS ====================== */
+    let guiasCache=[], editGuia=null;
+
+    async function loadGuias(){
+      guiasCache = await fetch('/api/guias').then(r=>r.json());
+      const tb = $('#guiasTable tbody'); tb.innerHTML='';
+      guiasCache.forEach(g=>{
+        tb.insertAdjacentHTML('beforeend',`
+          <tr>
+            <td>${g.descripcion}</td><td>${g.activo?'✔':'✖'}</td>
+            <td>
+              <button class="edit"   data-id="${g.id}">✏</button>
+              <button class="toggle" data-id="${g.id}">${g.activo ? '🚫' : '✔'}</button>
+            </td>
+          </tr>`);});
+      tb.querySelectorAll('.edit')  .forEach(b=>b.onclick=()=>fillGuiaForm(b.dataset.id));
+      tb.querySelectorAll('.toggle').forEach(b=>b.onclick=()=>toggleGuia(b.dataset.id));
+    }
+
+    function fillGuiaForm(id){
+      const g = guiasCache.find(x=>x.id==id);
+      if(!g) return;
+      $('#g_nombre').value = g.descripcion;
+      editGuia = id;
+      $('#guiaSubmit').textContent='Guardar';
+      $('#guiaCancel').classList.remove('hidden');
+    }
+
+    $('#guiaCancel').onclick = e=>{e.preventDefault();resetGuiaForm();};
+    function resetGuiaForm(){
+      $('#g_nombre').value=''; editGuia=null;
+      $('#guiaSubmit').textContent='Agregar/Guardar';
+      $('#guiaCancel').classList.add('hidden');
+    }
+
+    $('#guiaForm').onsubmit = async e=>{
+      e.preventDefault();
+      const nombre = $('#g_nombre').value.trim();
+      if(editGuia){
+        await fetch(`/api/guias/${editGuia}`,{
+          method:'PUT',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({descripcion:nombre,activo:true})
+        });
+      }else{
+        await fetch('/api/guias',{
+          method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({descripcion:nombre})
+        });
+      }
+      resetGuiaForm(); loadGuias();
+    };
+
+    async function toggleGuia(id){
+      const g = guiasCache.find(x=>x.id==id);
+      await fetch(`/api/guias/${id}`,{
+        method:'PUT',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({descripcion:g.descripcion,activo:!g.activo})
+      });
+      loadGuias();
+    }
     /* ---------- CRUD USUARIOS ---------- */
     let usuariosCache=[],editUser=null;
     async function loadUsers(){
@@ -716,12 +1119,25 @@
       loadUsers();
     }
 
-    $('#cfgTabs').onclick=e=>{
-      const tab=e.target.dataset.tab;if(!tab) return;
+    $('#cfgTabs').onclick = e => {
+      const tab = e.target.dataset.tab;
+      if (!tab) return;
+
+      // cambia visual
       $('#cfgTabs .active')?.classList.remove('active');
       e.target.classList.add('active');
-      $$('#cfg .tab-content').forEach(tc=>tc.classList.toggle('active',tc.id==='tab-'+tab));
-      if(tab==='users') loadUsers();
+      $$('#cfg .tab-content').forEach(tc =>
+        tc.classList.toggle('active', tc.id === 'tab-' + tab));
+
+      // carga según pestaña
+      if (tab === 'users')   loadUsers();
+      if (tab === 'guias')   loadGuias();
+      if (tab === 'colores') loadColores();
+
+      /* 🆕  nuevas pestañas */
+      if (tab === 'grupos')  loadGrupos();
+      if (tab === 'rutas')   loadRutas();
+      if (tab === 'turnos')  loadTurnos();
     };
 
     /* ---------- REPORTE ---------- */

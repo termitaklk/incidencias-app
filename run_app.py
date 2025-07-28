@@ -20,24 +20,125 @@ PORT = 5000
 # --- APP SETUP ---
 app = Flask(__name__, static_folder=str(ROOT), static_url_path="")
 
+# ─────────────────────────── GRUPOS ───────────────────────────
+@app.get("/api/grupos")
+def list_grupos():
+    rows = get_db().execute(
+        "SELECT id, descripcion, activo FROM grupos ORDER BY descripcion"
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@app.post("/api/grupos")
+def add_grupo():
+    nombre = (request.json or {}).get("descripcion", "").strip()
+    if not nombre:
+        return abort(400, "Falta la descripción del grupo")
+    db = get_db()
+    db.execute("INSERT INTO grupos (descripcion, activo) VALUES (?,1)", (nombre,))
+    db.commit()
+    return "", 204
+
+@app.route("/api/grupos/<int:_id>", methods=["PUT"])
+def update_grupo(_id):
+    data   = request.json or {}
+    nombre = data.get("descripcion", "").strip()
+    activo = 1 if str(data.get("activo")).lower() in ("1","true","t","yes") else 0
+    if not nombre:
+        return abort(400, "Falta la descripción del grupo")
+    db = get_db()
+    db.execute(
+        "UPDATE grupos SET descripcion = ?, activo = ? WHERE id = ?",
+        (nombre, activo, _id)
+    )
+    db.commit()
+    return "", 204
+
+
+# ─────────────────────────── RUTAS ────────────────────────────
+@app.get("/api/rutas")
+def list_rutas():
+    rows = get_db().execute(
+        "SELECT id, descripcion, activo FROM rutas ORDER BY descripcion"
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@app.post("/api/rutas")
+def add_ruta():
+    nombre = (request.json or {}).get("descripcion", "").strip()
+    if not nombre:
+        return abort(400, "Falta la descripción de la ruta")
+    db = get_db()
+    db.execute("INSERT INTO rutas (descripcion, activo) VALUES (?,1)", (nombre,))
+    db.commit()
+    return "", 204
+
+@app.route("/api/rutas/<int:_id>", methods=["PUT"])
+def update_ruta(_id):
+    data   = request.json or {}
+    nombre = data.get("descripcion", "").strip()
+    activo = 1 if str(data.get("activo")).lower() in ("1","true","t","yes") else 0
+    if not nombre:
+        return abort(400, "Falta la descripción de la ruta")
+    db = get_db()
+    db.execute(
+        "UPDATE rutas SET descripcion = ?, activo = ? WHERE id = ?",
+        (nombre, activo, _id)
+    )
+    db.commit()
+    return "", 204
+
+
+# ─────────────────────────── TURNOS ───────────────────────────
+@app.get("/api/turnos")
+def list_turnos():
+    rows = get_db().execute(
+        "SELECT id, descripcion, activo FROM turnos ORDER BY id"
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+@app.post("/api/turnos")
+def add_turno():
+    desc = (request.json or {}).get("descripcion", "").strip()
+    if not desc:
+        return abort(400, "Falta la descripción del turno")
+    db = get_db()
+    db.execute("INSERT INTO turnos (descripcion, activo) VALUES (?,1)", (desc,))
+    db.commit()
+    return "", 204
+
+@app.route("/api/turnos/<int:_id>", methods=["PUT"])
+def update_turno(_id):
+    data   = request.json or {}
+    desc   = data.get("descripcion", "").strip()
+    activo = 1 if str(data.get("activo")).lower() in ("1","true","t","yes") else 0
+    if not desc:
+        return abort(400, "Falta la descripción del turno")
+    db = get_db()
+    db.execute(
+        "UPDATE turnos SET descripcion = ?, activo = ? WHERE id = ?",
+        (desc, activo, _id)
+    )
+    db.commit()
+    return "", 204
+
 @app.get("/api/rutas")
 def api_rutas():
-    rows = get_db().execute("SELECT id, descripcion FROM rutas ORDER BY descripcion").fetchall()
+    rows = get_db().execute("SELECT id, descripcion, activo FROM rutas ORDER BY descripcion").fetchall()
     return jsonify([dict(r) for r in rows])
 
 @app.get("/api/grupos")
 def api_grupos():
-    rows = get_db().execute("SELECT id, descripcion FROM grupos ORDER BY descripcion").fetchall()
+    rows = get_db().execute("SELECT id, descripcion, activo FROM grupos ORDER BY descripcion").fetchall()
     return jsonify([dict(r) for r in rows])
 
 @app.get("/api/colores")
 def api_colores():
-    rows = get_db().execute("SELECT id, descripcion FROM colores ORDER BY descripcion").fetchall()
+    rows = get_db().execute("SELECT id, descripcion, activo FROM colores ORDER BY descripcion").fetchall()
     return jsonify([dict(r) for r in rows])
 
 @app.get("/api/guias")
 def api_guias():
-    rows = get_db().execute("SELECT id, descripcion FROM guias ORDER BY descripcion").fetchall()
+    rows = get_db().execute("SELECT id, descripcion, activo FROM guias ORDER BY descripcion").fetchall()
     return jsonify([dict(r) for r in rows])
 
 def get_db():
@@ -82,6 +183,94 @@ def api_grupos_dia():
          ORDER BY g.descripcion
     """, (fecha,)).fetchall()
     return jsonify([dict(r) for r in rows])
+
+# ──────────────────────────────────────────────────────────────
+#  API: GUIAS
+# ──────────────────────────────────────────────────────────────
+@app.get("/api/guias")
+def list_guias():
+    rows = get_db().execute(
+        "SELECT id, descripcion, activo FROM guias ORDER BY descripcion"
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.post("/api/guias")
+def add_guia():
+    nombre = (request.json or {}).get("descripcion", "").strip()
+    if not nombre:
+        return abort(400, "Falta la descripción de la guía")
+    db = get_db()
+    db.execute("INSERT INTO guias(descripcion, activo) VALUES (?, 1)", (nombre,))
+    db.commit()
+    return "", 204
+
+
+# ──────────────────────────────────────────────────────────────
+#  API: COLORES
+# ──────────────────────────────────────────────────────────────
+@app.get("/api/colores")
+def list_colores():
+    rows = get_db().execute(
+        "SELECT id, descripcion, activo FROM colores ORDER BY descripcion"
+    ).fetchall()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.post("/api/colores")
+def add_color():
+    nombre = (request.json or {}).get("descripcion", "").strip()
+    if not nombre:
+        return abort(400, "Falta la descripción del color")
+    db = get_db()
+    db.execute("INSERT INTO colores(descripcion, activo) VALUES (?, 1)", (nombre,))
+    db.commit()
+    return "", 204
+
+def _to_int_bool(val):
+    """True/1/'true' → 1   |   False/0/'false'/None → 0"""
+    if isinstance(val, bool):
+        return 1 if val else 0
+    if isinstance(val, (int, float)):
+        return 1 if val else 0
+    return 1 if str(val).lower() in ('1', 'true', 't', 'yes') else 0
+
+
+# ───────────── GUIAS ─────────────
+@app.route("/api/guias/<int:_id>", methods=["PUT"])
+def update_guia(_id):
+    data   = request.json or {}
+    nombre = data.get("descripcion", "").strip()
+    activo = _to_int_bool(data.get("activo"))
+    if not nombre:
+        return abort(400, "Falta la descripción de la guía")
+
+    db = get_db()
+    db.execute(
+        "UPDATE guias SET descripcion = ?, activo = ? WHERE id = ?",
+        (nombre, activo, _id)
+    )
+    db.commit()
+    return "", 204
+
+
+# ──────────── COLORES ────────────
+@app.route("/api/colores/<int:_id>", methods=["PUT"])
+def update_color(_id):
+    data   = request.json or {}
+    nombre = data.get("descripcion", "").strip()
+    activo = _to_int_bool(data.get("activo"))
+    if not nombre:
+        return abort(400, "Falta la descripción del color")
+
+    db = get_db()
+    db.execute(
+        "UPDATE colores SET descripcion = ?, activo = ? WHERE id = ?",
+        (nombre, activo, _id)
+    )
+    db.commit()
+    return "", 204
+
 
 @app.get('/api/incidencias-reporte')
 def api_incidencias_reporte():
