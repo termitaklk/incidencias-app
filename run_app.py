@@ -577,10 +577,23 @@ def update_usuario(usuario):
     db.commit()
     return "", 204
 
-# --- ARRANQUE ---
+import socket
+def get_local_ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+    finally:
+        s.close()
+
+
+# run_app.py  – al final del archivo
 if __name__ == "__main__":
-    # Abrir navegador tras 1s
-    Timer(1.0, lambda: webbrowser.open_new_tab(f"http://localhost:{PORT}")).start()
-    print(f"📡 Servidor en http://localhost:{PORT} (Ctrl-C para detener)")
-    app.run(port=PORT, debug=False)
+    # abre también el navegador, como ya hacías
+    Timer(1.0, lambda: webbrowser.open_new_tab(
+        f"http://{get_local_ip()}:{PORT}")).start()
+
+    print(f"📡 Servidor en http://{get_local_ip()}:{PORT}  (Ctrl‑C para salir)")
+    app.run(host="0.0.0.0", port=PORT, debug=False)   # ← aquí el cambio
+
 
